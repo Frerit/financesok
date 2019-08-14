@@ -33,7 +33,8 @@ android {
 
     defaultConfig {
         applicationId "net.financesok.financesok"
-        minSdkVersion 16
+        minSdkVersion 26
+        multiDexEnabled true
         targetSdkVersion 28
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

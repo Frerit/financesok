@@ -1,8 +1,10 @@
-import 'dart:math';
 
 import 'package:financesok/model/Login.dart';
-import 'package:financesok/scenes/dashboard/DashboardPage.dart';
+import 'package:financesok/model/User.dart';
+import 'package:financesok/scenes/dashboard/NavButtonPage.dart';
+import 'package:financesok/scenes/register/RegisterPage.dart';
 import 'package:financesok/trans/translations.dart';
+import 'package:financesok/util/mapper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -226,7 +228,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         print(e);
       }).then((user) {
         if (user != null) {
-          Navigator.pushReplacement(context,  MaterialPageRoute(builder: (context) => DashboardPage()));
+          Navigator.pushReplacement(context,  MaterialPageRoute(builder: (context) => NavigationdPage()));
         }
       });
     }
@@ -236,20 +238,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     await _auth
         .signInAnonymously()
         .then((user){
-      Navigator.pushReplacement(context,  MaterialPageRoute(builder: (context) => DashboardPage()));
+      Navigator.pushReplacement(context,  MaterialPageRoute(builder: (context) => NavigationdPage()));
     }
     );
   }
 
   void _registerAttempAcount() async {
     if (_isValidRegister()) {
-      String name = signupNameController.text;
+
       await _auth.createUserWithEmailAndPassword(
           email: signupEmailController.text,
           password: signupConfirmPasswordController.text)
           .then((user){
         if (user != null) {
-          Navigator.push(context,  MaterialPageRoute(builder: (context) => LoginPage()));
+          User userData = Mappers.getUserContext(user.user);
+          Navigator.push(context,  MaterialPageRoute(builder: (context) => RegisterPage(userData)));
         }
       }).catchError((e){
         if(e.code == "ERROR_EMAIL_ALREADY_IN_USE") {
@@ -808,12 +811,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       _obscureTextLogin = !_obscureTextLogin;
     });
   }
-  void _toggleLogout() {
-    setState(() {
-      editUser = true;
-    });
-  }
-
 
   void _toggleSignup() {
     setState(() {
