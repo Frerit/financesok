@@ -179,7 +179,7 @@ SPEC CHECKSUMS:
   BoringSSL-GRPC: db8764df3204ccea016e1c8dd15d9a9ad63ff318
   cloud_firestore: 41f84086d2e1a5c216a6af07ef050758de825ff0
   Firebase: dedc9e48ea3f3649ad5f6b982f8a0c73508a14b5
-  firebase_auth: 0fed4be9a305986c406db1a34ecb1819e9e5415c
+  firebase_auth: 45f6476560c372649eba5980c58f0783b527d04f
   firebase_core: b3b02d0b5e9d01aab5e50ba7cbcf84c73cb6883c
   FirebaseAnalytics: 3fb375bc9d13779add4039716f868d233a473fad
   FirebaseAuth: a06ad63e9bf4c86165b54cceb1c14d4f4c38d419
