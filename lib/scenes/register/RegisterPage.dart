@@ -1,7 +1,9 @@
 import 'package:country_pickers/country.dart';
 import 'package:country_pickers/country_pickers.dart';
 import 'package:financesok/model/User.dart';
+import 'package:financesok/scenes/dashboard/NavButtonPage.dart';
 import 'package:financesok/styles/theme_login.dart' as ThemeLog;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -19,6 +21,13 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
 
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String smsCode;
+  String verificationId;
+
+  AuthCredential userCredential;
+
   final FocusNode myFocusNodePhone = FocusNode();
   final FocusNode myFocusNodePhoneConfirm = FocusNode();
   TextEditingController signupPhoneController = new TextEditingController();
@@ -32,6 +41,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   int _currentIdex = 0;
 
   int itemSize = 50;
+  int sizeCode = 6;
+
+  bool isValidPhone = false;
 
   void showInSnackBar(String value) {
     FocusScope.of(context).requestFocus(new FocusNode());
@@ -48,17 +60,59 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
       backgroundColor: ThemeLog.Colors.loginGradientStart,
       duration: Duration(seconds: 3),
     ));
-
-
   }
 
-  void _registerAttempNumberPhone() {
-    print( widget._currentUser);
+
+  Future<void> _registerAttempNumberPhone() async {
+    final PhoneCodeAutoRetrievalTimeout autoRetrie = (String verId) {
+      this.verificationId = verId;
+    };
+
+    final PhoneCodeSent smsCodeSend = (String veriId, [int forceCodeSend]) {
+      verificationId = veriId;
+      print(forceCodeSend);
+      setState(() {
+        isValidPhone = true;
+      });
+    };
+
+    final PhoneVerificationCompleted verificationCompleted = (AuthCredential user) {
+      print("Verificado" + user.toString());
+      userCredential = user;
+    };
+    
+    final PhoneVerificationFailed verificationFailed = (AuthException exption) {
+      print('${exption.message}');
+      showInSnackBar("Opps. Parece que ocurrio un error\n Intenta nuevamente");
+    };
+
+    final phoneValid = '+' + _selectedDialogCountry.phoneCode + signupPhoneController.text;
+
+    await _auth.verifyPhoneNumber(
+        phoneNumber: phoneValid,
+        codeAutoRetrievalTimeout: autoRetrie,
+        codeSent: smsCodeSend,
+        timeout: Duration(seconds: 50),
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed
+    );
+  }
+
+  Future<void> _contunueRegister() async {
+    smsCode = _listControllerText.map( (iten) => iten.text).toString();
+    setState(() {
+      widget._currentUser.phone = signupPhoneController.text;
+      widget._currentUser.isValidPhone = true;
+    });
+
+    if (verificationId.isNotEmpty) {
+      Navigator.pushReplacement(context,  MaterialPageRoute(builder: (context) => NavigationdPage()));
+    }
   }
 
   List<Widget> _buildListWidget() {
     List<Widget> listWidget = List();
-    for (int index = 0; index < 4; index++) {
+    for (int index = 0; index < sizeCode; index++) {
       double left = (index == 0) ? 0.0 : ( itemSize / 10);
       listWidget.add(Container(
           height: 20,
@@ -70,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   }
 
   void _next(int index) {
-    if (index != 4) {
+    if (index != sizeCode) {
       setState(() {
         _currentIdex = index + 1;
       });
@@ -93,7 +147,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   @override
   void initState() {
     if (_listFocusNode.isEmpty) {
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < sizeCode; i++) {
         _listFocusNode.add(new FocusNode());
         _listControllerText.add(new TextEditingController());
         _code.add(' ');
@@ -142,12 +196,10 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
           errorMaxLines: 1,
           fillColor: Colors.black),
       onChanged: (String value) {
-        if (value.length > 1 && index < 4 ||
+        if (value.length > 1 && index < sizeCode ||
             index == 0 && value.isNotEmpty) {
-          if (index == 4 - 1) {
-           setState(() {
-             print(value);
-           });
+          if (index == sizeCode - 1) {
+
             return;
           }
           if (_listControllerText[index + 1].value.text.isEmpty) {
@@ -231,7 +283,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                     )
                   ),
                   Padding(
-                      padding: EdgeInsets.only(top: 40.0),
+                      padding: EdgeInsets.only(top: 20.0),
                       child: Text(
                         "Ingresa tu numero celular",
                         style: TextStyle(
@@ -241,7 +293,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                       )
                   ),
                   Container(
-                    padding: EdgeInsets.only(top: 100.0),
+                    padding: EdgeInsets.only(top: 50.0),
                     child: Column(
                       children: <Widget>[
                         Stack(
@@ -254,83 +306,88 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8.0),
                               ),
-                              child: Container(
-                                width: 300.0,
-                                height: 330.0,
-                                child: Column(
-                                  children: <Widget>[ ////// Validacion de Usuario
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                          top: 20.0, bottom: 20.0, left: 5.0, right: 25.0),
-                                      child: ListTile(
-                                        onTap: _openCountryPickerDialog,
-                                        title: _buildDialogItem(_selectedDialogCountry),
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 250.0,
-                                      height: 1.0,
-                                      color: Colors.grey[400],
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                          top: 20.0, bottom: 20.0, left: 25.0, right: 25.0),
-                                      child: TextField(
-                                        focusNode: myFocusNodePhone,
-                                        controller: signupPhoneController,
-                                        keyboardType: TextInputType.phone,
-                                        style: TextStyle(
-                                            fontFamily: "WorkSansSemiBold",
-                                            fontSize: 16.0,
-                                            color: Colors.black),
-                                        decoration: InputDecoration(
-                                          border: InputBorder.none,
-                                          icon: Icon(
-                                            FontAwesomeIcons.envelope,
-                                            color: Colors.black,
-                                            size: 22.0,
-                                          ),
-                                          hintText: "Numero Celular",
-                                          hintStyle: TextStyle(
-                                              fontFamily: "WorkSansSemiBold", fontSize: 17.0),
+                              child: AnimatedContainer(
+                                duration: Duration(milliseconds: 1000),
+                                child: Container(
+                                  width:  300.0,
+                                  height: isValidPhone ? 330.0: 200,
+                                  child: Column(
+                                    children: <Widget>[ ////// Validacion de Usuario
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                            top: 20.0, bottom: 20.0, left: 5.0, right: 25.0),
+                                        child: ListTile(
+                                          onTap: _openCountryPickerDialog,
+                                          title: _buildDialogItem(_selectedDialogCountry),
                                         ),
                                       ),
-                                    ),
-                                    Container(
-                                      width: 250.0,
-                                      height: 1.0,
-                                      color: Colors.grey[400],
-                                    ),
-                                    Padding(
-                                        padding: EdgeInsets.only(
-                                            top: 20.0, bottom: 5.0, left: 25.0, right: 25.0),
-                                      child: Row(
-                                          children: <Widget>[
-                                            Icon(
-                                                FontAwesomeIcons.bell
-                                            ),
-                                            SizedBox(width: 12.0),
-                                            Text("Codigo de Confirmacion",
-                                              style: TextStyle(
-                                                  fontFamily: "WorkSansSemiBold",
-                                                  fontSize: 17.0
-                                              ),
-                                            ),
-                                          ]
-                                      )
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                          top: 20.0, bottom: 20.0, left: 20.0, right: 25.0),
-                                      child: SingleChildScrollView(
-                                          scrollDirection: Axis.horizontal,
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: _buildListWidget(),
-                                        )
+                                      Container(
+                                        width: 250.0,
+                                        height: 1.0,
+                                        color: Colors.grey[400],
                                       ),
-                                    ),
-                                  ],
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                            top: 20.0, bottom: 20.0, left: 25.0, right: 25.0),
+                                        child: TextField(
+                                          focusNode: myFocusNodePhone,
+                                          controller: signupPhoneController,
+                                          keyboardType: TextInputType.phone,
+                                          style: TextStyle(
+                                              fontFamily: "WorkSansSemiBold",
+                                              fontSize: 16.0,
+                                              color: Colors.black),
+                                          decoration: InputDecoration(
+                                            border: InputBorder.none,
+                                            icon: Icon(
+                                              FontAwesomeIcons.envelope,
+                                              color: Colors.black,
+                                              size: 22.0,
+                                            ),
+                                            hintText: "Numero Celular",
+                                            hintStyle: TextStyle(
+                                                fontFamily: "WorkSansSemiBold", fontSize: 17.0),
+                                          ),
+                                        ),
+                                      ),
+                                      isValidPhone ?
+                                      Container(
+                                        width: 250.0,
+                                        height: 1.0,
+                                        color: Colors.grey[400],
+                                      ) : Spacer(),
+                                      isValidPhone ?
+                                      Padding(
+                                          padding: EdgeInsets.only(
+                                              top: 20.0, bottom: 5.0, left: 25.0, right: 25.0),
+                                        child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                  FontAwesomeIcons.bell
+                                              ),
+                                              SizedBox(width: 12.0),
+                                              Text("Codigo de Confirmacion",
+                                                style: TextStyle(
+                                                    fontFamily: "WorkSansSemiBold",
+                                                    fontSize: 17.0
+                                                ),
+                                              ),
+                                            ]
+                                        )
+                                      ) : Spacer(),
+                                      isValidPhone ? Padding(
+                                        padding: EdgeInsets.only(
+                                            top: 20.0, bottom: 20.0, left: 20.0, right: 25.0),
+                                        child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: _buildListWidget(),
+                                          )
+                                        ),
+                                      ) : Spacer(),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -376,7 +433,7 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
                                     ),
                                   ),
                                   onPressed: () =>
-                                      _registerAttempNumberPhone()
+                                    isValidPhone ?_contunueRegister() : _registerAttempNumberPhone()
                               ),
                             ),
                           ],
@@ -392,8 +449,5 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
       ),
     );
   }
-
-
-
 }
 
