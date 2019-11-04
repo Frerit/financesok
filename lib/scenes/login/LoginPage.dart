@@ -3,6 +3,7 @@ import 'package:financesok/model/Login.dart';
 import 'package:financesok/model/User.dart';
 import 'package:financesok/scenes/dashboard/NavButtonPage.dart';
 import 'package:financesok/scenes/register/RegisterPage.dart';
+import 'package:financesok/util/LoadingPage.dart';
 import 'package:financesok/trans/translations.dart';
 import 'package:financesok/util/mapper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,9 +14,9 @@ import 'package:financesok/styles/theme_login.dart' as Theme;
 import 'package:financesok/util/bubble_indication.dart';
 import 'package:internationalization/internationalization.dart';
 
+
 class LoginPage extends StatefulWidget {
   LoginPage({Key key}) : super(key: key);
-
   @override
   _LoginPageState createState() => new _LoginPageState();
 }
@@ -44,8 +45,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   TextEditingController signupEmailController = new TextEditingController();
   TextEditingController signupNameController = new TextEditingController();
   TextEditingController signupPasswordController = new TextEditingController();
-  TextEditingController signupConfirmPasswordController =
-  new TextEditingController();
+  TextEditingController signupConfirmPasswordController = new TextEditingController();
 
   PageController _pageController;
 
@@ -55,6 +55,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   FirebaseUser currentUser;
   bool editUser = false;
 
+  bool _loading = false;
+
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
@@ -63,7 +65,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         onNotification: (overscroll) {
           overscroll.disallowGlow();
         },
-        child: SingleChildScrollView(
+        child: _loading ?  LoaadingPage() : SingleChildScrollView(
           child: Container(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height >= 775.0
@@ -127,7 +129,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               ],
             ),
           ),
-        ),
+        )
       ),
     );
   }
@@ -154,6 +156,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     getSessionActive();
   }
+
+
 
   void getSessionActive() async {
     currentUser = await _auth.currentUser();
@@ -213,11 +217,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
 
   void _loginAtenpiData() async {
+
     if( _isValid() ) {
+      setState(() { _loading = true; });
       await _auth.signInWithEmailAndPassword(
         email: loginEmailController.text,
         password: loginPasswordController.text,
       ).catchError((e) {
+        setState(() { _loading = false; });
         if (e.code == "ERROR_USER_NOT_FOUND") {
           showInSnackBar("Usuario no registrado");
         }else if (e.code == "ERROR_WRONG_PASSWORD"){
@@ -823,6 +830,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       _obscureTextSignupConfirm = !_obscureTextSignupConfirm;
     });
   }
+
+
 }
 
 
